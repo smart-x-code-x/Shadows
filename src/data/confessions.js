@@ -7,6 +7,7 @@ export const CONFESSIONS = [
     author: "VelvetNight",
     timestamp: "12m ago",
     likes: 124,
+    views: 452,
     reactions: { flame: 45, heart: 78, whisper: 12 }
   },
   {
@@ -17,6 +18,7 @@ export const CONFESSIONS = [
     author: "Obsidian",
     timestamp: "1h ago",
     likes: 342,
+    views: 891,
     reactions: { flame: 156, heart: 120, whisper: 66 }
   },
   {
@@ -27,6 +29,7 @@ export const CONFESSIONS = [
     author: "ElectricSoul",
     timestamp: "3h ago",
     likes: 567,
+    views: 1204,
     reactions: { flame: 230, heart: 200, whisper: 137 }
   },
   {
@@ -37,6 +40,7 @@ export const CONFESSIONS = [
     author: "MidnightRose",
     timestamp: "5h ago",
     likes: 890,
+    views: 2431,
     reactions: { flame: 420, heart: 380, whisper: 90 }
   },
   {
@@ -47,6 +51,7 @@ export const CONFESSIONS = [
     author: "WildHeart",
     timestamp: "8h ago",
     likes: 210,
+    views: 567,
     reactions: { flame: 95, heart: 85, whisper: 30 }
   }
 ];

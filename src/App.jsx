@@ -37,10 +37,12 @@ function App() {
       author: "Anonymous Shadow",
       timestamp: "Just now",
       likes: 0,
+      views: Math.floor(Math.random() * 200) + 50,
       reactions: { flame: 0, heart: 0, whisper: 0 }
     };
 
-    setConfessions([post, ...confessions]);
+    const updated = [post, ...confessions];
+    setConfessions(updated);
     setNewConfession("");
     setShowPostModal(false);
   };
@@ -159,7 +161,7 @@ function App() {
                   <span className="tag">{conf.category} • {conf.gender}</span>
                   <div className="flex items-center gap-2 text-[10px] font-black uppercase text-text-secondary">
                     <Eye size={12} />
-                    {Math.floor(Math.random() * 500) + 100}
+                    {conf.views || 0}
                   </div>
                 </div>
 
@@ -252,8 +254,8 @@ function App() {
                           type="button"
                           onClick={() => setSelectedGender(g)}
                           className={`flex-1 text-xs font-black py-3 rounded-xl border-2 transition-all ${selectedGender === g
-                              ? 'bg-pink-500 border-pink-400 text-white shadow-[0_0_15px_rgba(255,0,171,0.4)]'
-                              : 'bg-white/5 border-white/5 text-text-secondary hover:border-white/20'
+                            ? 'bg-pink-500 border-pink-400 text-white shadow-[0_0_15px_rgba(255,0,171,0.4)]'
+                            : 'bg-white/5 border-white/5 text-text-secondary hover:border-white/20'
                             }`}
                         >
                           {g}
