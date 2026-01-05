@@ -2,24 +2,27 @@ import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Ghost,
-  Heart,
   Plus,
   Send,
   User,
   Filter,
   Eye,
   Flame,
+  Heart,
   MessageCircle,
-  Share2,
   MoreHorizontal,
 } from "lucide-react";
 import { supabase } from "./lib/supabase";
 
+/* UI CONSTANTS */
 const CATEGORIES = ["All", "Intimate", "Secrets", "Desires", "Midnight Whispers"];
 const GENDERS = ["All", "Male", "Female", "Trans"];
 
 function App() {
+  /* GLOBAL DATA */
   const [confessions, setConfessions] = useState([]);
+
+  /* UI STATE */
   const [filterCategory, setFilterCategory] = useState("All");
   const [filterGender, setFilterGender] = useState("All");
   const [showPostModal, setShowPostModal] = useState(false);
@@ -27,26 +30,37 @@ function App() {
   const [selectedGender, setSelectedGender] = useState("Female");
   const [selectedCategory, setSelectedCategory] = useState("Intimate");
 
-  /* =======================
-     FETCH INITIAL DATA
-  ======================= */
+  /* =========================
+     FETCH SHADOWS + REACTIONS
+     ========================= */
+  const fetchShadows = async () => {
+    const { data, error } = await supabase
+      .from("shadows")
+      .select(
+        `
+        id,
+        content,
+        perspective,
+        aura,
+        created_at,
+        reactions (
+          id,
+          type
+        )
+      `
+      )
+      .order("created_at", { ascending: false });
+
+    if (!error) setConfessions(data);
+    else console.error(error);
+  };
+
+  /* INITIAL LOAD */
   useEffect(() => {
-    const fetchConfessions = async () => {
-      const { data, error } = await supabase
-        .from("shadows")
-        .select("*")
-        .order("created_at", { ascending: false });
-
-      if (!error) setConfessions(data);
-      else console.error(error);
-    };
-
-    fetchConfessions();
+    fetchShadows();
   }, []);
 
-  /* =======================
-     REALTIME SUBSCRIPTION
-  ======================= */
+  /* REALTIME: NEW SHADOWS */
   useEffect(() => {
     const channel = supabase
       .channel("realtime-shadows")
@@ -54,19 +68,36 @@ function App() {
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "shadows" },
         (payload) => {
-          setConfessions((prev) => [payload.new, ...prev]);
+          setConfessions((prev) => [
+            { ...payload.new, reactions: [] },
+            ...prev,
+          ]);
         }
       )
       .subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return () => supabase.removeChannel(channel);
   }, []);
 
-  /* =======================
-     POST NEW CONFESSION
-  ======================= */
+  /* REALTIME: REACTIONS */
+  useEffect(() => {
+    const channel = supabase
+      .channel("realtime-reactions")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "reactions" },
+        () => {
+          fetchShadows(); // simple & safe
+        }
+      )
+      .subscribe();
+
+    return () => supabase.removeChannel(channel);
+  }, []);
+
+  /* =========================
+     POST NEW SHADOW
+     ========================= */
   const handlePost = async (e) => {
     e.preventDefault();
     if (!newConfession.trim()) return;
@@ -86,6 +117,23 @@ function App() {
     setShowPostModal(false);
   };
 
+  /* =========================
+     ADD REACTION
+     ========================= */
+  const handleReaction = async (shadowId, type) => {
+    const { error } = await supabase.from("reactions").insert({
+      shadow_id: shadowId,
+      type,
+    });
+
+    if (error) console.error(error);
+  };
+
+  /* COUNT REACTIONS */
+  const countReactions = (reactions, type) =>
+    reactions?.filter((r) => r.type === type).length || 0;
+
+  /* FILTERS */
   const filteredConfessions = confessions.filter(
     (c) =>
       (filterCategory === "All" || c.aura === filterCategory) &&
@@ -95,7 +143,7 @@ function App() {
   return (
     <div className="min-h-screen pb-20">
       {/* NAVBAR */}
-      <nav className="glass sticky top-0 z-[100] px-8 py-5 mb-12">
+      <nav className="glass sticky top-0 z-50 px-8 py-5 mb-12">
         <div className="container mx-auto flex justify-between items-center">
           <div className="flex items-center gap-3">
             <Ghost size={28} />
@@ -147,22 +195,42 @@ function App() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
-              className="glass p-8 mb-8"
+              className="glass p-8 mb-8 break-inside-avoid"
             >
-              <span className="tag">
-                {conf.aura} • {conf.perspective}
-              </span>
-              <p className="text-xl italic mt-6">"{conf.content}"</p>
+              <div className="flex justify-between text-xs mb-4">
+                <span>
+                  {conf.aura} • {conf.perspective}
+                </span>
+                <span className="flex items-center gap-1">
+                  <Eye size={12} /> {conf.reactions?.length || 0}
+                </span>
+              </div>
+
+              <p className="text-xl italic mb-6">"{conf.content}"</p>
+
+              {/* REACTIONS */}
+              <div className="flex gap-6">
+                <button onClick={() => handleReaction(conf.id, "flame")}>
+                  <Flame /> {countReactions(conf.reactions, "flame")}
+                </button>
+                <button onClick={() => handleReaction(conf.id, "heart")}>
+                  <Heart /> {countReactions(conf.reactions, "heart")}
+                </button>
+                <button onClick={() => handleReaction(conf.id, "whisper")}>
+                  <MessageCircle />{" "}
+                  {countReactions(conf.reactions, "whisper")}
+                </button>
+              </div>
             </motion.div>
           ))}
         </AnimatePresence>
       </div>
 
-      {/* MODAL */}
+      {/* POST MODAL */}
       <AnimatePresence>
         {showPostModal && (
-          <motion.div className="fixed inset-0 bg-black/90 flex items-center justify-center">
-            <motion.div className="glass p-10 max-w-xl w-full">
+          <motion.div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50">
+            <motion.div className="glass p-10 max-w-xl w-full relative">
               <button
                 onClick={() => setShowPostModal(false)}
                 className="absolute top-6 right-6"
@@ -174,8 +242,9 @@ function App() {
                 <textarea
                   value={newConfession}
                   onChange={(e) => setNewConfession(e.target.value)}
-                  placeholder="Tell the darkness…"
+                  placeholder="Whisper into the darkness..."
                   className="w-full h-48 mb-6"
+                  autoFocus
                 />
 
                 <div className="flex gap-4 mb-6">
